@@ -1,6 +1,6 @@
 {
   "name": "sequelize-view-builder",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Librería para generar vistas SQL complejas reutilizables con Sequelize",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -16,7 +16,7 @@
     "example": "tsx examples/example-view.ts"
   },
   "keywords": ["sequelize", "sql", "view", "orm", "typescript"],
-  "author": "Villalba Ricardo Daniel:ritchieforest",
+  "author": "Villalba Ricardo Daniel:ritchieforests",
   "license": "MIT",
   "devDependencies": {
     "tsup": "^7.0.0",
