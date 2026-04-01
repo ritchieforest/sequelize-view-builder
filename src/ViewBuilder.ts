@@ -14,13 +14,15 @@ type SelectField = {
 };
 
 type FromClause = {
-    model: ModelStatic<any> | null;
+    model?: ModelStatic<any> | null;
+    table?: string;
     alias: string;
     select?: SelectField[];
 };
 
 type JoinClause = {
     model?: ModelStatic<any>;
+    table?: string;
     subview?: ViewBuilder | string;
     alias: string;
     type?: 'INNER' | 'LEFT' | 'RIGHT';
@@ -54,8 +56,14 @@ export class ViewBuilder {
         dateFormat: (column: string, format: string) => `__FORMAT_DATE__(${column}, '${format}')`
     }
 
-    dependsOn(...viewNames: string[]): this {
-        this.deps.push(...viewNames);
+    dependsOn(...viewNames: (string | string[])[]): this {
+        viewNames.forEach(v => {
+            if (Array.isArray(v)) {
+                this.deps.push(...v);
+            } else {
+                this.deps.push(v);
+            }
+        });
         return this;
     }
 
@@ -208,11 +216,18 @@ export class ViewBuilder {
 
     private generateFromClause(qg?: QueryGenerator): string {
         if (!this.fromClause) throw new Error('FROM clause not defined');
-        if (this.fromClause.model === null) {
-            return `FROM ${this.fromClause.alias}`;
+        
+        let source: string;
+        if (this.fromClause.model) {
+            source = this.getTableName(this.fromClause.model, qg);
+        } else if (this.fromClause.table) {
+            source = this.quoteIdent(this.fromClause.table, qg);
+        } else {
+            // Fallback al alias si no hay nada más
+            source = this.quoteIdent(this.fromClause.alias, qg);
         }
-        const table = this.getTableName(this.fromClause.model, qg);
-        return `FROM ${table} AS ${this.quoteIdent(this.fromClause.alias, qg)}`;
+
+        return `FROM ${source} AS ${this.quoteIdent(this.fromClause.alias, qg)}`;
     }
 
     private generateJoins(qg?: QueryGenerator): string {
@@ -224,10 +239,14 @@ export class ViewBuilder {
                 if (typeof j.subview == "object") {
                     joinSource = `(\n${j.subview.toSQLInline({ sequelize: qg?.sequelize })}\n) AS ${this.quoteIdent(j.alias, qg)}`;
                 } else if (j.model) {
-                    const table = this.getTableName(j.model, qg);
-                    joinSource = `${table} AS ${this.quoteIdent(j.alias, qg)}`;
+                    const tableSource = this.getTableName(j.model, qg);
+                    joinSource = `${tableSource} AS ${this.quoteIdent(j.alias, qg)}`;
+                } else if (j.table) {
+                    const tableSource = this.quoteIdent(j.table, qg);
+                    joinSource = `${tableSource} AS ${this.quoteIdent(j.alias, qg)}`;
                 } else {
-                    joinSource = j.subview + " " + this.quoteIdent(j.alias, qg);
+                    // Fallback para strings crudos o subqueries textuales pasadas en subview
+                    joinSource = `${j.subview} AS ${this.quoteIdent(j.alias, qg)}`;
                 }
 
                 const onParts = Object.entries(j.on).map(

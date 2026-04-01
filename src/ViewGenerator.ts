@@ -211,7 +211,7 @@ ${initFields}}, {
     return sorted;
   }
 
-  public async generateAllViews() {
+  public async generateAllViews(targetViewName?: string) {
     const files = this.getAllViewFiles(this.config.viewsDir);
     const cache = this.loadCache();
     let updatedCache = { ...cache };
@@ -254,14 +254,40 @@ ${initFields}}, {
     // FASE 2: Ordenamiento Topológico según dependencias
     const sortedViewDefs = this.topologicalSort(viewDefs);
 
-    // FASE 3: Procesamiento en orden correcto
+    // FASE 3: Identificar vistas a forzar si se proveyó targetViewName
+    const forceUpdate = new Set<string>();
+    if (targetViewName) {
+      console.log(`🔍 Buscando dependientes para forzar actualización de: ${targetViewName}`);
+      
+      const findDependents = (name: string) => {
+        if (forceUpdate.has(name)) return;
+        forceUpdate.add(name);
+        
+        // Buscar quién depende de 'name'
+        for (const def of viewDefs) {
+          const deps = def.builder.getDependencies();
+          if (deps.includes(name)) {
+            findDependents(def.viewName);
+          }
+        }
+      };
+      
+      const target = viewDefs.find(v => v.viewName === targetViewName);
+      if (target) {
+        findDependents(targetViewName);
+      } else {
+        console.warn(`⚠️ No se encontró la vista "${targetViewName}" para forzar. Se procederá normal.`);
+      }
+    }
+
+    // FASE 4: Procesamiento en orden correcto
     const nowTimestamp = new Date();
 
     for (let i = 0; i < sortedViewDefs.length; i++) {
         const def = sortedViewDefs[i];
         const { filePath, hash, builder: viewBuilder, viewName } = def;
 
-        if (cache[filePath] === hash) {
+        if (cache[filePath] === hash && !forceUpdate.has(viewName)) {
             console.log(`🟡 Sin cambios: ${filePath}`);
             continue;
         }
