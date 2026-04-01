@@ -62,8 +62,7 @@ export default new ViewBuilder()
   .associate('User', 'belongsTo', { foreignKey: 'user_id' }); // Inyecta asociaciones al modelo TS
 ```
 
-> [!IMPORTANT]
-> **¿Por qué usar `.dependsOn()`?**  
+> **IMPORTANTE:**  
 > Si tu vista utiliza otra vista en el `FROM` o `JOIN`, **debes declararla** con `.dependsOn()`. Esto permite que el orquestador genere las migraciones en el orden cronológico correcto y que, al actualizar una vista base, se refresquen automáticamente todas las dependientes en cascada.
 
 ### 2️⃣ Orquestación con Cero Configuración (CLI)

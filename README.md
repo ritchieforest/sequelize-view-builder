@@ -62,8 +62,7 @@ export default new ViewBuilder()
   .associate('User', 'belongsTo', { foreignKey: 'user_id' }); // Inject ORM associations
 ```
 
-> [!IMPORTANT]
-> **Why use `.dependsOn()`?**  
+> **IMPORTANT:**  
 > If your view uses another view in the `FROM` or `JOIN` clause, **you must declare it** with `.dependsOn()`. This allows the orchestrator to generate migrations in the correct chronological order and ensures that when a base view is updated, all dependents are automatically refreshed in cascade.
 
 ### 2️⃣ Zero-Config Orchestration (CLI)
