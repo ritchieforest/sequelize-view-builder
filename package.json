@@ -4,6 +4,9 @@
   "description": "Librería para generar vistas SQL complejas reutilizables con Sequelize",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "sequelize-view": "./dist/cli.js"
+  },
   "exports": {
     ".": {
       "import": "./dist/index.js",
@@ -15,15 +18,23 @@
     "dev": "tsup --watch",
     "example": "tsx examples/example-view.ts"
   },
-  "keywords": ["sequelize", "sql", "view", "orm", "typescript"],
+  "keywords": [
+    "sequelize",
+    "sql",
+    "view",
+    "orm",
+    "typescript"
+  ],
   "author": "Villalba Ricardo Daniel:ritchieforests",
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "tsup": "^7.0.0",
-    "typescript": "^5.0.0",
-    "tsx": "^4.0.0"
+    "tsx": "^4.0.0",
+    "typescript": "^5.0.0"
   },
   "dependencies": {
-    "sequelize": "^6.37.0"
+    "sequelize": "^6.37.0",
+    "ts-node": "^10.9.2"
   }
 }
