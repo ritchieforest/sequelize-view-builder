@@ -25,17 +25,17 @@ const view = new ViewBuilder()
   .groupBy(['u.id', 'u.name']);
 
 
-const last_post=new ViewBuilder()
+const last_post = new ViewBuilder()
   .from({
-    model:Post,
-    alias:"sq1",
-    select:[
-      {column:"id"}
+    model: Post,
+    alias: "sq1",
+    select: [
+      { column: "id" }
     ]
   })
   .where("user_id=u.id")
   .limit(1)
-  .order({"id":"DESC"})
+  .order({ "id": "DESC" })
 const view_con_join_sub_query = new ViewBuilder()
   .title('user_with_last_post')
   .from({
@@ -46,7 +46,7 @@ const view_con_join_sub_query = new ViewBuilder()
   .join({
     model: Post,
     alias: 'p',
-    on: { 'u.id': 'p.user_id',"p.id":`(${last_post.toSQLInline().replaceAll("\n"," ")})` },
+    on: { 'u.id': 'p.user_id', "p.id": `(${last_post.toSQLInline().replaceAll("\n", " ")})` },
     select: [{ column: 'p.id', alias: 'post_count' }],
     type: 'LEFT'
   })

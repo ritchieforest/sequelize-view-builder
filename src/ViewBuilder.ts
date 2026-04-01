@@ -5,6 +5,7 @@ type QueryGenerator = any;
 
 export interface ViewSQLOptions {
     sequelize?: Sequelize;
+    sqlFileRelativePath?: string;
 }
 
 type SelectField = {
@@ -90,12 +91,12 @@ export class ViewBuilder {
         return this;
     }
 
-    order(obj: Object) {
+    order(obj: any) {
         const onParts = Object.entries(obj).map(
-            ([left, right]) => `${left} ${right},`
+            ([column, direction]) => `${column} ${direction}`
         );
-        this.orderBy=onParts.join(" ").slice(0,-1)
-        return this
+        this.orderBy = " ORDER BY " + onParts.join(", ");
+        return this;
     }
 
     limit(num: number) {
@@ -312,8 +313,8 @@ ${joins ? joins : ''}
 ${where ? where : ''}
 ${groupBy ? groupBy : ''}
 ${having ? having : ''}
-${limit ? limit : ''}
 ${order ? order : ''}
+${limit ? limit : ''}
 `.trim();
 
         return this.applyMacros(rawSql, options);
@@ -353,6 +354,35 @@ ${withClause ? withClause + '\n' : ''}${body};${indexesSQL}
 
     toMigration(viewName: string, options?: ViewSQLOptions): string {
         const sql = this.toSQL(viewName, options);
+        
+        if (options?.sqlFileRelativePath) {
+            return `
+'use strict';
+const fs = require('fs');
+const path = require('path');
+
+module.exports = {
+    up: async (queryInterface, Sequelize) => {
+        const sqlPath = path.resolve(__dirname, '${options.sqlFileRelativePath.replace(/\\/g, '\\\\')}');
+        const sql = fs.readFileSync(sqlPath, 'utf8');
+        
+        // Dividir por punto y coma, cuidando que no estén dentro de comillas simples (básico)
+        const statements = sql.split(/;(?=(?:[^']*'[^']*')*[^']*$)/g)
+            .map(s => s.trim())
+            .filter(Boolean);
+            
+        for (const statement of statements) {
+            await queryInterface.sequelize.query(statement);
+        }
+    },
+
+    down: async (queryInterface, Sequelize) => {
+        const mat = ${this._isMaterialized ? 'true' : 'false'} ? 'MATERIALIZED ' : '';
+        await queryInterface.sequelize.query(\`DROP \${mat}VIEW IF EXISTS ${viewName};\`);
+    }
+};
+`.trim();
+        }
 
         // Se usa backticks en el template para poder incrustar SQL multi-linea de forma cruda si no hay utils.
         return `
@@ -360,8 +390,15 @@ ${withClause ? withClause + '\n' : ''}${body};${indexesSQL}
 module.exports = {
     up: async (queryInterface, Sequelize) => {
         // SQL Auto-generado por sequelize-view-builder
-        const sql = \`${sql.replace(/`/g, '\\`')}\`;
-        await queryInterface.sequelize.query(sql);
+        const sql = \`${sql.replace(/`/g, '\\`').replace(/\$/g, '\\$')}\`;
+        // Dividir por punto y coma, cuidando que no estén dentro de comillas simples (básico)
+        const statements = sql.split(/;(?=(?:[^']*'[^']*')*[^']*$)/g)
+            .map(s => s.trim())
+            .filter(Boolean);
+            
+        for (const statement of statements) {
+            await queryInterface.sequelize.query(statement);
+        }
     },
 
     down: async (queryInterface, Sequelize) => {

@@ -16,7 +16,8 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "example": "tsx examples/example-view.ts"
+    "example": "tsx examples/example-view.ts",
+    "migrate:example": "tsx src/cli.ts --config examples/db.ts --views examples/views --sql examples/out-sql --migrations examples/migrations --models examples/setup"
   },
   "keywords": [
     "sequelize",
@@ -29,6 +30,7 @@
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^25.5.0",
+    "sqlite3": "^6.0.1",
     "tsup": "^7.0.0",
     "tsx": "^4.0.0",
     "typescript": "^5.0.0"

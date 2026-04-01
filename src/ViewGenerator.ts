@@ -271,7 +271,7 @@ ${initFields}}, {
         // Dar nombre topológico incrementando los segundos cronológicamente, para Sequelize-CLI (YYYYMMDDHHmmss)
         // Ejemplo `20260401095543-create-user-post-summary.js`
         const d = new Date(nowTimestamp.getTime() + (i * 1000));
-        const tsPrefix = d.toISOString().replace(/\\D/g, '').slice(0, 14);
+        const tsPrefix = d.toISOString().replace(/\D/g, '').slice(0, 14);
         
         const filename = `${tsPrefix}-create-${viewName.replace(/_/g, "-")}.js`;
         const fileView = `${viewName.replace(/_/g, "-")}.ts`;
@@ -291,8 +291,17 @@ ${initFields}}, {
         if (!fs.existsSync(this.config.migrationsDir)) {
           fs.mkdirSync(this.config.migrationsDir, { recursive: true });
         }
+        let sqlFileRelativePath: string | undefined;
+        if (this.config.sqlDir && this.config.migrationsDir) {
+          const sqlFilePath = path.resolve(this.config.sqlDir, viewName + ".sql");
+          sqlFileRelativePath = path.relative(this.config.migrationsDir, sqlFilePath);
+        }
+
         const filepath = path.join(this.config.migrationsDir, filename);
-        const content = viewBuilder.toMigration(viewName, { sequelize: this.config.sequelize });
+        const content = viewBuilder.toMigration(viewName, { 
+          sequelize: this.config.sequelize,
+          sqlFileRelativePath
+        });
         fs.writeFileSync(filepath, content, 'utf8');
         console.log(`✅ Migración generada: ${filename}`);
 
