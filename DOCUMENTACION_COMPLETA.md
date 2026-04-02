@@ -1,5 +1,7 @@
 # Documentación Completa: Sequelize View Builder
 
+> ⚠️ **IMPORTANTE**: Esta librería es para **definir vistas SQL persistentes** que se crean UNA VEZ y se consultan MUCHAS VECES. No es un query builder para consultas dinámicas basadas en entrada de usuario. Para queries dinámicas, usa Sequelize directamente.
+
 ## 📋 Tabla de Contenidos
 1. [Introducción](#introducción)
 2. [Conceptos Fundamentales](#conceptos-fundamentales)

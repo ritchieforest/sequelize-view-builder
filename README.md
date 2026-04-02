@@ -39,6 +39,10 @@
 
 **Sequelize-view-builder** is a production-ready TypeScript library that revolutionizes how you manage complex SQL views in Node.js applications. It solves a critical gap: SQL views are powerful but painful to maintain across codebases.
 
+> ⚠️ **Important**: This library is for **defining and managing persistent SQL views** (stored in the database), not for building dynamic queries. Once views are created, you query them using auto-generated models.
+
+### The Problem it Solves
+
 Instead of:
 - ❌ Writing raw SQL strings scattered across files
 - ❌ Managing fragile manual migrations
@@ -46,10 +50,10 @@ Instead of:
 - ❌ Tracking view dependencies mentally
 
 You can now:
-- ✅ Define views in TypeScript using a Fluent API
+- ✅ Define views declaratively in TypeScript (write once, maintain easily)
 - ✅ Auto-generate migrations with correct dependency ordering
 - ✅ Get fully-typed models automatically
-- ✅ Let the orchestrator handle the complexity
+- ✅ Let the orchestrator handle dependency complexity
 
 ---
 
@@ -121,6 +125,25 @@ npx sequelize-view user_posts       # Update specific view + dependents
 
 ## 🤔 Why Sequelize View Builder?
 
+### ⚠️ When to Use vs When NOT to Use
+
+#### ✅ **PERFECT FOR**
+- Defining complex views used repeatedly across your app
+- Pre-computed aggregations and analytics
+- Complex joins that you need to reuse (report generation, dashboards)
+- Performance-critical data structures (materialized views)
+- Multiple views with complex dependencies
+- Team environments where views need documentation
+
+#### ❌ **NOT DESIGNED FOR**
+- Building dynamic queries based on user input
+- One-time SQL queries
+- Replacing a query builder like KNEX or Query Builder
+- Ad-hoc analytical queries
+- Complex WHERE clauses that change per request
+
+If you need dynamic queries, use **Sequelize's built-in query methods** or a **query builder** instead.
+
 ### The Problem
 - **Views are complex** but management tools are basic
 - **Dependencies are error-prone** to manage manually
@@ -131,14 +154,15 @@ npx sequelize-view user_posts       # Update specific view + dependents
 ### The Solution
 Sequelize View Builder treats views as **first-class citizens** in your data architecture:
 
-| Aspect | Without Builder | With Builder |
+| Aspect | Manual Approach | With Builder |
 |--------|-----------------|--------------|
-| **Definition** | Raw SQL strings | TypeScript Fluent API |
-| **Dependencies** | Manual tracking | Automatic DAG analysis |
-| **Type Safety** | None | Full auto-inference |
-| **Migrations** | Hand-written | Auto-generated |
-| **Refactoring** | Error-prone | Safe & verified |
+| **Definition** | SQL files + migrations | TypeScript Fluent API |
+| **Dependencies** | Manual dependency tracking | Automatic DAG analysis |
+| **Type Safety** | Hand-written models | Full auto-inference |
+| **Migrations** | Hand-coded SQL | Auto-generated |
+| **Refactoring** | Error-prone, manual | Safe & verified |
 | **Team Workflow** | Scattered knowledge | Centralized, documented |
+| **Reusability** | Copy-paste SQL | Composable builders |
 
 ---
 
@@ -202,8 +226,39 @@ module.exports = {
 ### Step 3: Generate Views
 
 ```bash
-# Sync all views
+# Sync all views (creates in database + generates migrations)
 npx sequelize-view
+
+# Or force specific view + dependents
+npx sequelize-view user_posts
+```
+
+> ✅ **This runs ONCE** (or when you change your view definition). The view now lives in your database permanently.
+
+### Step 4: Query Your View (Many Times)
+
+```typescript
+import { UserPosts } from './models/generated';
+
+// Query it like any Sequelize model - use it as many times as needed
+const topUsers = await UserPosts.findAll({
+  limit: 10,
+  order: [['post_count', 'DESC']],
+  where: { post_count: { [Op.gt]: 5 } }
+});
+
+// Get specific user's posts
+const userPosts = await UserPosts.findAll({
+  where: { user_id: 123 }
+});
+
+// Aggregate the pre-aggregated data
+const avgPostCount = await UserPosts.findAll({
+  attributes: [[Sequelize.fn('AVG', Sequelize.col('post_count')), 'average']]
+});
+```
+
+> 🔄 **This runs MANY TIMES** with full TypeScript safety. The view definition is static in your database.
 
 # Or force specific view + its dependents
 npx sequelize-view user_posts
@@ -234,7 +289,23 @@ const topUsers = await UserPosts.findAll({
 
 ---
 
-## 📚 Documentation
+## � ViewBuilder vs Normal Sequelize Queries
+
+| Scenario | Use ViewBuilder | Use Sequelize Directly |
+|----------|-----------------|----------------------|
+| Complex join used 10+ times | ✅ Yes | ❌ No |
+| Pre-computed aggregation | ✅ Yes | ❌ No |
+| Report data structure | ✅ Yes | ❌ No |
+| Dynamic user-based filter | ❌ No | ✅ Yes |
+| One-time query | ❌ No | ✅ Yes |
+| Analytics dashboard data | ✅ Yes | ❌ No |
+| Search functionality | ❌ No | ✅ Yes |
+
+**Bottom line**: ViewBuilder is for *defining* reusable views. Use normal Sequelize methods for *querying* with dynamic WHERE clauses.
+
+---
+
+## �📚 Documentation
 
 We've created comprehensive documentation to help you master the library:
 
@@ -261,19 +332,72 @@ We've created comprehensive documentation to help you master the library:
 
 ---
 
-## 💡 Use Cases
+## 💡 Real-World Use Cases
 
-### Analytics Dashboards
+**Remember**: Define views once, query them forever.
+
+### 1. **Analytics Dashboards**
 ```typescript
-// Base view: user engagement metrics
-// Intermediate: segmented by region
-// Top: trended analytics dashboard
-// Views compose automatically with dependency tracking
+// Define base view ONCE
+export default new ViewBuilder()
+  .title('user_engagement_metrics')
+  .from({ model: User, alias: 'u' })
+  .join({ model: Post, alias: 'p', on: {'u.id': 'p.user_id'} })
+  .groupBy(['u.id']);
+
+// Then query it INFINITELY with TypeScript safety
+const metrics = await UserEngagementMetrics.findAll({
+  where: { created_at: { [Op.gte]: lastWeek } },
+  limit: 100,
+  order: [['engagement_score', 'DESC']]
+});
 ```
+✅ Perfect for: Pre-computed metrics queried repeatedly
 
-### Report Generation
+### 2. **Complex Report Data**
 ```typescript
-.materialized(true)  // Pre-computed for speed
+// Define complex join structure ONCE
+export default new ViewBuilder()
+  .title('monthly_sales_report')
+  .materialized(true)  // Pre-computed monthly
+  .from({ model: Sale, alias: 's' })
+  .join({ model: Customer, alias: 'c' })
+  .join({ model: Product, alias: 'p' })
+  .groupBy(['MONTH(s.date)']);
+
+// Refresh nightly, query infinitely
+```
+✅ Perfect for: Pre-calculated reports refreshed on schedule
+
+### 3. **Multi-Level Aggregations**
+```typescript
+// Layer 1: user_posts (joins users + posts)
+// Layer 2: user_engagement (aggregates posts per user)  
+// Layer 3: top_users (ranks engaged users)
+// Dependencies auto-managed
+```
+✅ Perfect for: Hierarchical data structures
+
+### 4. **Materialized Performance Cache**
+```typescript
+.materialized(true)
+.index(['user_id'], { unique: true })
+// For expensive queries that don't need real-time data
+```
+✅ Perfect for: Analytics, dashboards, reports
+
+### ❌ ANTI-PATTERN: Dynamic WHERE Clauses
+```typescript
+// DON'T do this - use Sequelize's built-in methods instead
+export default new ViewBuilder()
+  .title('users_dynamic_filter')  // BAD - not for dynamic queries
+  .where(`name LIKE '%${userInput}%'`);  // Avoid interpolation
+
+// INSTEAD do this
+const results = await User.findAll({
+  where: { name: { [Op.like]: `%${userInput}%` } }
+});
+```
 .index(['date', 'region'])
 // Reports query instant results
 ```

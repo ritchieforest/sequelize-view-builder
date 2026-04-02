@@ -20,6 +20,8 @@
 
 **Sequelize-view-builder** es una librería TypeScript lista para producción que revoluciona cómo gestionas vistas SQL complejas en aplicaciones Node.js. Resuelve un vacío crítico: las vistas SQL son poderosas pero dolorosas de mantener.
 
+> ⚠️ **Importante**: Esta librería es para **definir y gestionar vistas SQL persistentes** (almacenadas en la BD), no para construir consultas dinámicas. Una vez creadas las vistas, las consultas usando modelos auto-generados.
+
 - ✅ **SQL seguro con tipos** y modelos TypeScript auto-generados
 - ✅ **Resolución automática de dependencias** mediante ordenamiento topológico  
 - ✅ **Soporte multi-dialecto** (MySQL, PostgreSQL, MSSQL, SQLite)
@@ -28,6 +30,25 @@
 - ✅ **Listo para producción** con manejo completo de errores
 
 ---
+
+## 🎯 ¿Cuándo Usar vs Cuándo NO Usar?
+
+#### ✅ **PERFECTO PARA**
+- Definir vistas complejas reutilizables en tu app
+- Pre-computar agregaciones y analytics
+- Joins complejos que necesitas reutilizar (reportes, dashboards)
+- Estructuras de datos críticas para rendimiento (vistas materializadas)
+- Múltiples vistas con dependencias complejas
+- Equipos donde las vistas necesitan documentación
+
+#### ❌ **NO ESTÁ DISEÑADO PARA**
+- Construir consultas dinámicas basadas en entrada de usuario
+- Consultas SQL de una sola vez
+- Reemplazar query builders como KNEX
+- Consultas analíticas ad-hoc
+- WHERE dinámicos que cambian por solicitud
+
+Si necesitas consultas dinámicas, usa **métodos integrados de Sequelize** o un **query builder** en su lugar.
 
 ## 🎯 Características Principales
 
